@@ -1,6 +1,7 @@
 package com.milosev.googlemapstestsandbox
 
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import com.google.android.gms.maps.GoogleMap
 import com.google.maps.android.data.kml.KmlLayer
@@ -8,37 +9,37 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.net.URL
 
 class LoadKml {
-    fun execute(activity: Context, map: GoogleMap) {
+    fun execute(activity: Context, googleMap: GoogleMap) {
 
-        CoroutineScope(Dispatchers.IO).launch {
+        val kmlClient = CreateRetrofitBuilder().createRetrofitBuilder("https://www.milosev.com/")
+            .create(IGetKml::class.java)
+
+        CoroutineScope(Dispatchers.Main).launch {
+
             try {
-                val url =
-                    URL("https://www.milosev.com/gallery/allWithPics/travelBuddies/tunis/kml/kml.kml")
-                val connection = url.openConnection()
-                connection.connectTimeout = 15000
-                connection.readTimeout = 60000
+                val webApiRequest =
+                    kmlClient.getKml("https://www.milosev.com/gallery/allWithPics/travelBuddies/tunis/kml/kml.kml");
 
-                val tempFile = File(activity.cacheDir, "temp.kml")
-                connection.getInputStream().use { input ->
-                    tempFile.outputStream().use { output ->
-                        input.copyTo(output)
+                if (webApiRequest.isSuccessful) {
+                    val bytes = webApiRequest.body()?.bytes()
+                    if (bytes != null) {
+                        val input = ByteArrayInputStream(bytes)
+                        val kmlLayer = KmlLayer(googleMap, input, activity)
+                        kmlLayer.addLayerToMap()
+                        Log.i("KML", "Loaded successfully")
                     }
+                } else {
+                    Log.e("KML", "Error: ${webApiRequest.code()}")
                 }
 
-                withContext(Dispatchers.Main) {
-                    val layer = KmlLayer(map, FileInputStream(tempFile), activity)
-                    layer.addLayerToMap()
-                    Toast.makeText(activity, "KML Loaded", Toast.LENGTH_LONG).show()
-                }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(activity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-                }
+                e.printStackTrace()
             }
         }
 

@@ -61,4 +61,9 @@ dependencies {
 
     implementation(libs.play.services.maps)
     implementation(libs.android.maps.utils)
+
+    implementation(libs.retrofit)
+    implementation(libs.okhttp)
+    implementation(libs.converter.scalars)
+    implementation(libs.converter.gson)
 }
